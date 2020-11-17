@@ -32,8 +32,8 @@ pub struct KeyGenParty1Message2 {
     pub ecdh_second_message: party_one::KeyGenSecondMsg,
     pub ek: EncryptionKey,
     pub c_key: BigInt,
-    pub correct_key_proof: NICorrectKeyProof,
-    pub range_proof: RangeProofNi,
+    pub correct_key_proof: Option<NICorrectKeyProof>,
+    pub range_proof: Option<RangeProofNi>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -150,7 +150,7 @@ impl MasterKey1 {
         MasterKey1 {
             public: party_one_public,
             private: party_one_private,
-            chain_code: chain_code,
+            chain_code,
         }
     }
 
@@ -174,6 +174,7 @@ impl MasterKey1 {
         comm_witness: party_one::CommWitness,
         ec_key_pair_party1: &party_one::EcKeyPair,
         proof: &DLogProof,
+        generate_zk_proofs: bool
     ) -> (
         KeyGenParty1Message2,
         party_one::PaillierKeyPair,
@@ -189,12 +190,18 @@ impl MasterKey1 {
         let party_one_private =
             party_one::Party1Private::set_private_key(&ec_key_pair_party1, &paillier_key_pair);
 
-        let range_proof = party_one::PaillierKeyPair::generate_range_proof(
-            &paillier_key_pair,
-            &party_one_private,
-        );
-        let correct_key_proof =
-            party_one::PaillierKeyPair::generate_ni_proof_correct_key(&paillier_key_pair);
+        let mut range_proof: Option<RangeProofNi> = None;
+        let mut correct_key_proof: Option<NICorrectKeyProof> = None;
+        if generate_zk_proofs{
+            range_proof = Some(party_one::PaillierKeyPair::generate_range_proof(
+                &paillier_key_pair,
+                &party_one_private,
+            ));
+
+            correct_key_proof =
+                Some(party_one::PaillierKeyPair::generate_ni_proof_correct_key(&paillier_key_pair));
+        }
+
         (
             KeyGenParty1Message2 {
                 ecdh_second_message: key_gen_second_message,
